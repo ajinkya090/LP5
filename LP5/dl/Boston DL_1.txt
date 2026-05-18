@@ -1,0 +1,120 @@
+# =======================
+# 1. IMPORT LIBRARIES
+# =======================
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+
+# =======================
+# 2. LOAD DATASET
+# =======================
+column_names = ['CRIM','ZN','INDUS','CHAS','NOX','RM','AGE',
+                'DIS','RAD','TAX','PTRATIO','B','LSTAT','PRICE']
+
+df = pd.read_csv("housing.csv", header=None, delim_whitespace=True, names=column_names)
+
+print("First 5 rows:")
+print(df.head())
+
+print("\nDataset Info:")
+print(df.info())
+
+print("\nStatistics:")
+print(df.describe())
+
+# =======================
+# 3. VISUALIZATION
+# =======================
+
+# Correlation heatmap
+plt.figure(figsize=(12,10))
+sns.heatmap(df.corr(), annot=True, cmap='coolwarm')
+plt.title("Correlation Matrix")
+plt.show()
+
+# Target distribution
+sns.histplot(df['PRICE'], kde=True)
+plt.title("Price Distribution")
+plt.show()
+
+# =======================
+# 4. PREPROCESSING
+# =======================
+
+# Features & target
+X = df.drop("PRICE", axis=1)
+y = df["PRICE"]
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Scaling
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# =======================
+# 5. MODEL (DNN)
+# =======================
+model = Sequential()
+
+model.add(Dense(64, activation='relu', input_shape=(13,)))
+model.add(Dense(32, activation='relu'))
+model.add(Dense(1))   # regression output
+
+# =======================
+# 6. COMPILE
+# =======================
+model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+
+model.summary()
+
+# =======================
+# 7. TRAIN
+# =======================
+history = model.fit(
+    X_train, y_train,
+    epochs=50,
+    batch_size=32,
+    validation_split=0.2
+)
+
+# =======================
+# 8. EVALUATION
+# =======================
+loss, mae = model.evaluate(X_test, y_test)
+
+print("Test Loss (MSE):", loss)
+print("Test MAE:", mae)
+
+# =======================
+# 9. PREDICTIONS
+# =======================
+pred = model.predict(X_test)
+
+# =======================
+# 10. ACTUAL vs PREDICTED 🔥
+# =======================
+plt.scatter(y_test, pred)
+plt.xlabel("Actual Prices")
+plt.ylabel("Predicted Prices")
+plt.title("Actual vs Predicted")
+plt.show()
+
+# =======================
+# 11. TRAINING GRAPHS
+# =======================
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Val Loss')
+plt.title("Loss Graph")
+plt.legend()
+plt.show()

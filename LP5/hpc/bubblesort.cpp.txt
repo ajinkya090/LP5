@@ -1,0 +1,77 @@
+#include <iostream>
+#include <omp.h>
+
+using namespace std;
+
+// Sequential Bubble Sort
+void sequentialBubble(int arr[], int n) {
+    double start = omp_get_wtime();
+    for(int i = 0; i < n-1; i++) {
+        for(int j = 0; j < n-i-1; j++) {
+            if(arr[j] > arr[j+1]) {
+                swap(arr[j], arr[j+1]);
+            }
+        }
+    }
+    double end = omp_get_wtime();
+    
+    cout << "\nSequential Bubble Sort:\n";
+    for(int i = 0; i < n; i++) cout << arr[i] << " ";
+    cout << "\nTime: " << end - start << " seconds\n";
+}
+
+// Parallel Bubble Sort (Odd-Even Transposition Sort)
+void parallelBubble(int arr[], int n) {
+    double start = omp_get_wtime();
+    
+    for(int k = 0; k < n; k++) {
+        // Even phase
+        if(k % 2 == 0) {
+            #pragma omp parallel for
+            for(int i = 0; i < n-1; i += 2) {
+                if(arr[i] > arr[i+1]) {
+                    swap(arr[i], arr[i+1]);
+                }
+            }
+        } 
+        // Odd phase
+        else {
+            #pragma omp parallel for
+            for(int i = 1; i < n-1; i += 2) {
+                if(arr[i] > arr[i+1]) {
+                    swap(arr[i], arr[i+1]);
+                }
+            }
+        }
+    }
+    double end = omp_get_wtime();
+    
+    cout << "\nParallel Bubble Sort:\n";
+    for(int i = 0; i < n; i++) cout << arr[i] << " ";
+    cout << "\nTime: " << end - start << " seconds\n";
+}
+
+int main() {
+    int n;
+    cout << "Enter size: ";
+    cin >> n;
+    
+    // Safely allocating memory for arrays
+    int *arr = new int[n];
+    int *arr2 = new int[n];
+    
+    cout << "Enter elements:\n";
+    for(int i = 0; i < n; i++) {
+        cin >> arr[i];
+        arr2[i] = arr[i]; // copy for parallel
+    }
+    
+    sequentialBubble(arr, n);
+    parallelBubble(arr2, n);
+    
+    // Freeing memory
+    delete[] arr;
+    delete[] arr2;
+    
+    return 0;
+}

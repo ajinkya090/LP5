@@ -1,0 +1,146 @@
+# =======================
+# 1. IMPORT LIBRARIES
+# =======================
+import numpy as np
+import matplotlib.pyplot as plt
+
+from keras.datasets import fashion_mnist
+from keras.utils import to_categorical
+
+from keras.models import Sequential
+from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, LeakyReLU
+
+from sklearn.metrics import classification_report
+
+# =======================
+# 2. LOAD DATASET
+# =======================
+(train_X, train_Y), (test_X, test_Y) = fashion_mnist.load_data()
+
+print("Train shape:", train_X.shape)
+print("Test shape:", test_X.shape)
+
+# =======================
+# 3. VISUALIZATION
+# =======================
+plt.imshow(train_X[0], cmap='gray')
+plt.title(f"Label: {train_Y[0]}")
+plt.show()
+
+# =======================
+# 4. PREPROCESSING
+# =======================
+train_X = train_X.reshape(-1, 28, 28, 1)
+test_X = test_X.reshape(-1, 28, 28, 1)
+
+train_X = train_X.astype('float32') / 255.0
+test_X = test_X.astype('float32') / 255.0
+
+train_Y_one_hot = to_categorical(train_Y)
+test_Y_one_hot = to_categorical(test_Y)
+
+# =======================
+# 5. MODEL
+# =======================
+model = Sequential()
+
+model.add(Conv2D(32, (3,3), padding='same', input_shape=(28,28,1)))
+model.add(LeakyReLU(alpha=0.1))
+model.add(MaxPooling2D((2,2)))
+
+model.add(Conv2D(64, (3,3), padding='same'))
+model.add(LeakyReLU(alpha=0.1))
+model.add(MaxPooling2D((2,2)))
+
+model.add(Conv2D(128, (3,3), padding='same'))
+model.add(LeakyReLU(alpha=0.1))
+model.add(MaxPooling2D((2,2)))
+
+model.add(Flatten())
+
+model.add(Dense(128))
+model.add(LeakyReLU(alpha=0.1))
+model.add(Dropout(0.3))
+
+model.add(Dense(10, activation='softmax'))
+
+# =======================
+# 6. COMPILE
+# =======================
+model.compile(loss='categorical_crossentropy',
+              optimizer='adam',
+              metrics=['accuracy'])
+
+model.summary()
+
+# =======================
+# 7. TRAIN
+# =======================
+history = model.fit(
+    train_X, train_Y_one_hot,
+    batch_size=64,
+    epochs=10,
+    validation_split=0.2
+)
+
+# =======================
+# 8. EVALUATE
+# =======================
+loss, acc = model.evaluate(test_X, test_Y_one_hot)
+print("Test Accuracy:", acc)
+
+# =======================
+# 9. GRAPHS
+# =======================
+plt.plot(history.history['accuracy'], label='Train Acc')
+plt.plot(history.history['val_accuracy'], label='Val Acc')
+plt.title("Accuracy")
+plt.legend()
+plt.show()
+
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Val Loss')
+plt.title("Loss")
+plt.legend()
+plt.show()
+
+# =======================
+# 10. PREDICTIONS 🔥
+# =======================
+predicted = model.predict(test_X)
+predicted_classes = np.argmax(predicted, axis=1)
+
+# =======================
+# 11. CORRECT / INCORRECT
+# =======================
+correct = np.where(predicted_classes == test_Y)[0]
+incorrect = np.where(predicted_classes != test_Y)[0]
+
+print("Correct predictions:", len(correct))
+print("Incorrect predictions:", len(incorrect))
+
+# Show some correct predictions
+plt.figure(figsize=(8,8))
+for i, idx in enumerate(correct[:9]):
+    plt.subplot(3,3,i+1)
+    plt.imshow(test_X[idx].reshape(28,28), cmap='gray')
+    plt.title(f"P:{predicted_classes[idx]} T:{test_Y[idx]}")
+    plt.axis('off')
+plt.tight_layout()
+plt.show()
+
+# Show some incorrect predictions
+plt.figure(figsize=(8,8))
+for i, idx in enumerate(incorrect[:9]):
+    plt.subplot(3,3,i+1)
+    plt.imshow(test_X[idx].reshape(28,28), cmap='gray')
+    plt.title(f"P:{predicted_classes[idx]} T:{test_Y[idx]}")
+    plt.axis('off')
+plt.tight_layout()
+plt.show()
+
+# =======================
+# 12. CLASSIFICATION REPORT 🔥
+# =======================
+target_names = [f"Class {i}" for i in range(10)]
+print(classification_report(test_Y, predicted_classes, target_names=target_names))

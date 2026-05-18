@@ -1,0 +1,100 @@
+#include <iostream>
+#include <omp.h>
+
+using namespace std;
+
+// Merge function
+void merge(int arr[], int l, int m, int r) {
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    // Safely allocate memory dynamically instead of using VLAs
+    int *L = new int[n1];
+    int *R = new int[n2];
+
+    for(int i = 0; i < n1; i++) L[i] = arr[l + i];
+    for(int i = 0; i < n2; i++) R[i] = arr[m + 1 + i];
+
+    int i = 0, j = 0, k = l;
+
+    while(i < n1 && j < n2) {
+        if(L[i] <= R[j]) arr[k++] = L[i++];
+        else arr[k++] = R[j++];
+    }
+
+    while(i < n1) arr[k++] = L[i++];
+    while(j < n2) arr[k++] = R[j++];
+
+    // Free the dynamically allocated memory to prevent memory leaks
+    delete[] L;
+    delete[] R;
+}
+
+// Sequential Merge Sort
+void mergeSort(int arr[], int l, int r) {
+    if(l < r) {
+        int m = (l + r) / 2;
+        mergeSort(arr, l, m);
+        mergeSort(arr, m+1, r);
+        merge(arr, l, m, r);
+    }
+}
+
+// Parallel Merge Sort
+void parallelMergeSort(int arr[], int l, int r) {
+    if(l < r) {
+        int m = (l + r) / 2;
+
+        // Parallelize the recursive sorting of the two halves
+        #pragma omp parallel sections
+        {
+            #pragma omp section
+            parallelMergeSort(arr, l, m);
+
+            #pragma omp section
+            parallelMergeSort(arr, m+1, r);
+        }
+
+        merge(arr, l, m, r);
+    }
+}
+
+int main() {
+    int n;
+    cout << "Enter size: ";
+    cin >> n;
+
+    // Safely allocating memory for the arrays
+    int *arr = new int[n];
+    int *arr2 = new int[n];
+
+    cout << "Enter elements:\n";
+    for(int i = 0; i < n; i++) {
+        cin >> arr[i];
+        arr2[i] = arr[i]; // copy for parallel
+    }
+
+    // Sequential
+    double start1 = omp_get_wtime();
+    mergeSort(arr, 0, n-1);
+    double end1 = omp_get_wtime();
+
+    cout << "\nSequential Merge Sort:\n";
+    for(int i = 0; i < n; i++) cout << arr[i] << " ";
+    cout << "\nTime: " << end1 - start1 << " seconds\n";
+
+    // Parallel
+    double start2 = omp_get_wtime();
+    parallelMergeSort(arr2, 0, n-1);
+    double end2 = omp_get_wtime();
+
+    cout << "\nParallel Merge Sort:\n";
+    for(int i = 0; i < n; i++) cout << arr2[i] << " ";
+    cout << "\nTime: " << end2 - start2 << " seconds\n";
+
+    // Clean up memory
+    delete[] arr;
+    delete[] arr2;
+
+    return 0;
+}
